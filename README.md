@@ -1,20 +1,37 @@
-# Prayag Sales & Accounting Portal V5 — Fast Query Mode
+# Prayag CEO Dashboard V10
 
-V5 is designed specifically to solve the slow loading problem.
+## What's new
+- Opening Balance as on **01-04-2026**
+- Opening Balance + FY 2026-27 Sales + DN - Payment - CN - Sales Return = Outstanding
+- Party-wise opening balance and outstanding
+- API health check before loading
+- Better JSON/error handling so the dashboard does not remain stuck on Loading
+- Summary response includes filter lists, so an extra `lists` API call is avoided
+- Short server-side cache for repeated dashboard requests
+- Apps Script Web App URL is already configured in `dashboard.js`
 
-It DOES NOT download the full 215k-row Sales sheet at startup.
-- Login: only small lookup queries (State Head, Party, State, Group, FY, Month).
-- Dashboard: server-side aggregated queries.
-- Party details: loaded only when a Party is clicked.
-- Invoice/item details: loaded only when an Invoice is clicked.
+## One-time Google Sheet setup
+In accounting workbook:
+`1oHFpXqVDPRF3Vi3WV9MdNcxkHNjgytLPxXUQgM6o1ok`
 
-Sources:
-Sales workbook: 1QIpcfgOVCFjcCmgU_DXKn8h7Bfa8rm2q2wB2HneTvKs / Sheet1
-Accounting workbook: 1oHFpXqVDPRF3Vi3WV9MdNcxkHNjgytLPxXUQgM6o1ok
-Tabs: SALE RETURN, CN SAP, DN SAP, DEBTOR
+Create a tab named:
+**OPENING BALANCE**
 
-Important:
-Both Google workbooks must be shared as Anyone with the link → Viewer.
+Paste the opening-balance data with columns like:
+- G/L Acct/BP Code
+- Name
+- Local Currency - Balance
 
-Sales amount is treated as taxable and dashboard totals add 18% GST.
-CN, DN and Sales Return are treated as GST-inclusive.
+The screenshot data supplied by the user is treated as the **Opening Balance as on 01-04-2026**.
+
+## Apps Script
+Replace `Code.gs` with the V10 Code.gs in this ZIP and create a new Web App deployment:
+- Execute as: Me
+- Who has access: Anyone
+
+Then GitHub:
+- replace `index.html`
+- replace `style.css`
+- replace `dashboard.js`
+
+No login is required.
