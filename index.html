@@ -6,8 +6,8 @@
 <body>
 <div id="login" class="login"><div class="loginbox"><div class="logo">P</div><h1>PRAYAG</h1><p>Sales & Accounting Portal</p>
 <label>Role</label><select id="role"><option>ADMIN</option><option>STATE HEAD</option><option>PARTY</option></select>
-<label>User</label><select id="user"><option value="">Select</option></select><button id="loginBtn">OPEN DASHBOARD</button>
-<small>Prototype access screen. Secure Firebase authentication should be added before external party access.</small></div></div>
+<div id="userWrap"><label>User</label><select id="user"><option value="">Loading users...</option></select></div><button id="loginBtn">OPEN DASHBOARD</button>
+<small id="loginStatus">Loading State Heads and Parties…</small></div></div>
 <div id="app" class="hide"><header><div class="brand"><b>PRAYAG</b><span>Sales & Accounting</span></div><div><span id="roleTag"></span><button id="refresh">↻ Refresh</button><button id="logout">Logout</button></div></header>
 <main>
 <div class="notice">LIVE DATA: Sales + DEBTOR + CN SAP + DN SAP + SALE RETURN</div>

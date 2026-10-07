@@ -14,3 +14,7 @@ SALE RETURN = credit, GST already included
 DEBTOR = payment, credit
 
 Header matching is normalized to handle trailing spaces and variants such as STATE HEAD A / STATE HEAD A  and CODE / ITEM CODE.
+
+## V3 login improvement
+The login screen now preloads live data. ADMIN does not require a User selection.
+STATE HEAD shows only State Heads; PARTY shows only Parties.
