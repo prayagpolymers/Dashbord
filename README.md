@@ -18,3 +18,8 @@ Header matching is normalized to handle trailing spaces and variants such as STA
 ## V3 login improvement
 The login screen now preloads live data. ADMIN does not require a User selection.
 STATE HEAD shows only State Heads; PARTY shows only Parties.
+
+## V4 performance fix
+- Login no longer downloads the Google Sheets a second time.
+- Preloaded data is reused when opening the dashboard.
+- Session cache prevents repeated downloads during the same browser session.
