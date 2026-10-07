@@ -1,20 +1,101 @@
-const C={sales:["1QIpcfgOVCFjcCmgU_DXKn8h7Bfa8rm2q2wB2HneTvKs","Sheet1"],acc:["1oHFpXqVDPRF3Vi3WV9MdNcxkHNjgytLPxXUQgM6o1ok",{"return":"SALE RETURN",cn:"CN SAP",dn:"DN SAP",pay:"DEBTOR"}]};let T=[],role="ADMIN",user="",charts={};const $=x=>document.getElementById(x),N=x=>String(x??"").trim().toLowerCase().replace(/[\s_]+/g," "),M=x=>"₹"+(Number(x)||0).toLocaleString("en-IN",{maximumFractionDigits:0});function K(h,arr){let a=Object.keys(h);for(let q of arr){let z=a.find(k=>N(k)===N(q));if(z)return z}for(let q of arr){let z=a.find(k=>N(k).includes(N(q)));if(z)return z}return null}function n(v){let x=parseFloat(String(v??"").replace(/[₹,\s]/g,""));return isNaN(x)?0:x}function D(v){if(!v)return null;let s=String(v).trim(),d=new Date(s);if(!isNaN(d))return d;let m=s.match(/(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})/);if(m){let y=+m[3];if(y<100)y+=2000;return new Date(y,+m[2]-1,+m[1])}return null}function mk(d){return d?d.toLocaleString("en-IN",{month:"short"})+"-"+String(d.getFullYear()).slice(-2):""}function fy(d){if(!d)return"";let y=d.getFullYear(),m=d.getMonth()+1;return m>=4?`FY-${y}-${String(y+1).slice(-2)}`:`FY-${y-1}-${String(y).slice(-2)}`}function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}async function get(id,s){let r=await fetch(`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(s)}`);if(!r.ok)throw Error(s+" not accessible");return r.text()}function csv(t){let R=[],r=[],c="",q=0;for(let i=0;i<t.length;i++){let x=t[i],y=t[i+1];if(x=='"'&&q&&y=='"'){c+='"';i++;continue}if(x=='"'){q=!q;continue}if(x==","&&!q){r.push(c);c="";continue}if((x=="\n"||x=="\r")&&!q){if(x=="\r"&&y=="\n")i++;r.push(c);c="";if(r.some(v=>v.trim()))R.push(r);r=[];continue}c+=x}if(c||r.length){r.push(c);R.push(r)}let H=R.shift().map(x=>x.trim());return R.map(a=>Object.fromEntries(H.map((h,i)=>[h,a[i]??""])))}
-function sales(a){if(!a.length)return[];let h=Object.fromEntries(Object.keys(a[0]).map(k=>[k,k])),party=K(h,["CUSTOMER","PARTY NAME","PARTY","ACCOUNT NAME"]),date=K(h,["DATE","DOCUMENT DATE"]),amt=K(h,["AMOUNT","SALE AMOUNT","TAXABLE AMOUNT"]),inv=K(h,["INVOICE NO","INVOICE","DOCUMENT"]),state=K(h,["STATE"]),sh=K(h,["STATE HEAD A","STATE HEAD","STATE HEAD A "]),grp=K(h,["GROUP","MASTER GROUP"]),code=K(h,["CODE","ITEM CODE","ITEM CODE "]),qty=K(h,["QTY","QUANTITY"]),rate=K(h,["SALE RATE","RATE"]),FY=K(h,["FY-2025-26","FY"]),type=K(h,["TYPE"]);return a.map(r=>{let d=D(r[date]),v=n(r[amt]);return{type:"SALE",date:d,party:String(r[party]||"").trim(),doc:String(r[inv]||"").trim(),tax:v,total:v*1.18,state:String(r[state]||"").trim(),sh:String(r[sh]||"").trim(),group:String(r[grp]||"").trim(),code:String(r[code]||"").trim(),qty:n(r[qty]),rate:n(r[rate]),fy:String(r[FY]||"").trim()||fy(d),raw:r}})}function acc(a,type){if(!a.length)return[];let h=Object.fromEntries(Object.keys(a[0]).map(k=>[k,k])),party=K(h,["PARTY ACCOUNT NAME","ACCOUNT NAME","PARTY NAME","ACCOUNT","PARTY"]),date=K(h,["DOCUMENT DATE","DATE"]),amt=K(h,["TOTAL AMOUNT","AMOUNT","DEBIT AMOUNT"]),doc=K(h,["DOCUMENT","VOUCHER"]),state=K(h,["STATE"]),sh=K(h,["STATE HEAD","STATE HEAD A"]);return a.map(r=>{let d=D(r[date]);return{type,date:d,party:String(r[party]||"").trim(),doc:String(r[doc]||"").trim(),amount:n(r[amt]),state:String(r[state]||"").trim(),sh:String(r[sh]||"").trim(),fy:fy(d),raw:r}})}
-async function load(){try{let cached=sessionStorage.getItem("prayag_data_loaded");if(cached==="1"&&T.length){fill();render();return}let [s,r,c,d,p]=await Promise.all([get(...C.sales),get(C.acc[0],C.acc[1].return),get(C.acc[0],C.acc[1].cn),get(C.acc[0],C.acc[1].dn),get(C.acc[0],C.acc[1].pay)]);T=[...sales(csv(s)),...acc(csv(d),"DEBIT NOTE").map(x=>({...x,type:"DEBIT NOTE"})),...acc(csv(p),"PAYMENT").map(x=>({...x,type:"PAYMENT"})),...acc(csv(c),"CREDIT NOTE").map(x=>({...x,type:"CREDIT NOTE"})),...acc(csv(r),"SALES RETURN").map(x=>({...x,type:"SALES RETURN"}))];sessionStorage.setItem("prayag_data_loaded","1");fill();render()}catch(e){alert("Data load error: "+e.message+"\\n\\nCheck both workbooks: Anyone with link → Viewer.");console.error(e)}}function uniq(a){return[...new Set(a.filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b)))}function fill(){let users=uniq(T.flatMap(x=>[x.sh,x.party]));$("user").innerHTML='<option value="">Select</option>'+users.map(x=>`<option>${esc(x)}</option>`).join("");let f=(id,a)=>{let e=$(id),v=e.value;e.innerHTML='<option>ALL</option>'+uniq(a).map(x=>`<option>${esc(x)}</option>`).join("");if([...e.options].some(o=>o.value===v))e.value=v};f("fy",T.map(x=>x.fy));f("month",T.map(x=>mk(x.date)));f("sh",T.map(x=>x.sh));f("state",T.map(x=>x.state));f("group",T.map(x=>x.group));f("party",T.map(x=>x.party))}
-function ok(x){if(role==="PARTY"&&N(x.party)!==N(user))return false;if(role==="STATE HEAD"&&N(x.sh)!==N(user))return false;let a=[["fy",x.fy],["month",mk(x.date)],["sh",x.sh],["state",x.state],["group",x.group],["party",x.party]];for(let [id,v] of a)if($(id).value!=="ALL"&&N($(id).value)!==N(v))return false;let f=$("from").value,to=$("to").value;if(f&&x.date&&x.date<new Date(f))return false;if(to&&x.date&&x.date>new Date(to+"T23:59:59"))return false;let q=N($("search").value);if(q&&!N([x.party,x.doc,x.code,x.group,x.state,x.sh].join(" ")).includes(q))return false;return true}function filt(){return T.filter(ok)}function amt(x){return x.type==="SALE"?x.total:x.amount}function sign(x){return["SALE","DEBIT NOTE"].includes(x.type)?amt(x):-amt(x)}function age(a){let ds=a.filter(x=>["SALE","DEBIT NOTE"].includes(x.type)).sort((x,y)=>x.date-y.date).map(x=>({x,amt:amt(x)})),cs=a.filter(x=>["PAYMENT","CREDIT NOTE","SALES RETURN"].includes(x.type)).reduce((z,x)=>z+amt(x),0);for(let d of ds){let u=Math.min(d.amt,cs);d.amt-=u;cs-=u;if(cs<=0)break}let b={"0-30":0,"31-60":0,"61-90":0,"91-180":0,"181+":0},now=new Date();for(let d of ds)if(d.amt>.01){let days=Math.max(0,Math.floor((now-d.x.date)/86400000));b[days<=30?"0-30":days<=60?"31-60":days<=90?"61-90":days<=180?"91-180":"181+"]+=d.amt}return b}function current(){let z=new Date();return filt().filter(x=>x.date&&x.date.getMonth()==z.getMonth()&&x.date.getFullYear()==z.getFullYear())}
-function render(){let a=filt(),cm=current(),ag=age(a),sales=cm.filter(x=>x.type==="SALE").reduce((z,x)=>z+x.total,0),pay=cm.filter(x=>x.type==="PAYMENT").reduce((z,x)=>z+x.amount,0);$("salesK").textContent=M(sales);$("collectionK").textContent=M(pay);$("outK").textContent=M(Object.values(ag).reduce((z,x)=>z+x,0));$("overK").textContent=M(ag["91-180"]+ag["181+"]);$("cnK").textContent=M(a.filter(x=>x.type==="CREDIT NOTE").reduce((z,x)=>z+x.amount,0));$("dnK").textContent=M(a.filter(x=>x.type==="DEBIT NOTE").reduce((z,x)=>z+x.amount,0));$("retK").textContent=M(a.filter(x=>x.type==="SALES RETURN").reduce((z,x)=>z+x.amount,0));partyTable(a);itemTable(a);charts(a)}
-function partyTable(a){let m=new Map();for(let x of a){if(!x.party)continue;let k=N(x.party);if(!m.has(k))m.set(k,{name:x.party,state:x.state,sh:x.sh,s:0,p:0});let z=m.get(k);if(x.type==="SALE")z.s+=x.total;if(x.type==="PAYMENT")z.p+=x.amount}let rows=[...m.values()].map(z=>{let aa=age(a.filter(x=>N(x.party)===N(z.name))),o=Object.values(aa).reduce((q,v)=>q+v,0);return{...z,o,over:aa["91-180"]+aa["181+"]}}).sort((a,b)=>b.o-a.o);$("partyRows").innerHTML=rows.slice(0,150).map(z=>`<tr><td class="link" onclick='party("${esc(z.name)}")'>${esc(z.name)}</td><td>${esc(z.state)}</td><td>${esc(z.sh)}</td><td>${M(z.s)}</td><td>${M(z.p)}</td><td><b>${M(z.o)}</b></td><td>${M(z.over)}</td></tr>`).join("")}
-function itemTable(a){let m=new Map();for(let x of a.filter(x=>x.type==="SALE")){let k=x.code||"(Blank)";if(!m.has(k))m.set(k,{code:k,group:x.group,qty:0,s:0});let z=m.get(k);z.qty+=x.qty;z.s+=x.total}let r=[...m.values()].sort((a,b)=>b.s-a.s);$("itemCount").textContent=r.length+" item codes";$("itemRows").innerHTML=r.slice(0,200).map(z=>`<tr><td class="link" onclick='item("${esc(z.code)}")'>${esc(z.code)}</td><td>${esc(z.group)}</td><td>${z.qty.toLocaleString("en-IN")}</td><td>${M(z.s)}</td></tr>`).join("")}
-function chart(id,type,labels,data,label){if(charts[id])charts[id].destroy();charts[id]=new Chart($(id),{type,data:{labels,datasets:[{label,data,borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,scales:type==="doughnut"?{}:{y:{beginAtZero:true}}}})}
-function charts(a){let sh=uniq(a.filter(x=>x.type==="SALE").map(x=>x.sh)).slice(0,15);chart("shChart","bar",sh,sh.map(s=>a.filter(x=>x.type==="SALE"&&x.sh===s).reduce((z,x)=>z+x.total,0)),"Sales");let st=uniq(a.filter(x=>x.type==="SALE").map(x=>x.state)).slice(0,15);chart("stateChart","bar",st,st.map(s=>a.filter(x=>x.type==="SALE"&&x.state===s).reduce((z,x)=>z+x.total,0)),"Sales");let ms=uniq(a.map(x=>mk(x.date))).sort();chart("monthChart","bar",ms,[...ms].map(m=>a.filter(x=>x.type==="SALE"&&mk(x.date)===m).reduce((z,x)=>z+x.total,0)),"Sales");let ag=age(a);chart("ageChart","doughnut",Object.keys(ag),Object.values(ag),"Outstanding")}
-function open(title,body){$("mtitle").textContent=title;$("mbody").innerHTML=body;$("modal").classList.remove("hide")}function party(p){let a=T.filter(x=>N(x.party)===N(p)&&ok(x)).sort((a,b)=>a.date-b.date),ag=age(a),rows=a.map(x=>`<tr><td>${x.date?x.date.toLocaleDateString("en-IN"):""}</td><td>${x.type}</td><td>${esc(x.doc)}</td><td>${x.type==="SALE"?esc(x.code):""}</td><td>${sign(x)>0?M(sign(x)):""}</td><td>${sign(x)<0?M(-sign(x)):""}</td><td>${esc(x.state)}</td></tr>`).reverse().join("");open(p,`<div class="age">${Object.entries(ag).map(([k,v])=>`<div>${k} Days<b>${M(v)}</b></div>`).join("")}</div><h3>Ledger / Outstanding: ${M(Object.values(ag).reduce((z,x)=>z+x,0))}</h3><table><thead><tr><th>Date</th><th>Type</th><th>Document</th><th>Item Code</th><th>Debit</th><th>Credit</th><th>State</th></tr></thead><tbody>${rows}</tbody></table>`)}
-function item(code){let a=T.filter(x=>x.type==="SALE"&&x.code===code&&ok(x)),rows=a.map(x=>`<tr><td>${x.date?x.date.toLocaleDateString("en-IN"):""}</td><td>${esc(x.party)}</td><td>${esc(x.doc)}</td><td>${x.qty}</td><td>${M(x.rate)}</td><td>${M(x.tax)}</td><td>${M(x.total)}</td></tr>`).join("");open("Item Code: "+code,`<table><thead><tr><th>Date</th><th>Party</th><th>Invoice</th><th>Qty</th><th>Sale Rate</th><th>Taxable</th><th>Total incl. GST</th></tr></thead><tbody>${rows}</tbody></table>`)}
-function card(t){let a=t==="sales"?current().filter(x=>x.type==="SALE"):t==="collection"?current().filter(x=>x.type==="PAYMENT"):filt();if(t==="outstanding"||t==="overdue"){let m=new Map();for(let x of a){if(!m.has(N(x.party)))m.set(N(x.party),x.party)}let r=[...m.values()].map(p=>{let g=age(a.filter(x=>N(x.party)===N(p)));return{p,g,o:Object.values(g).reduce((z,v)=>z+v,0)}}).filter(x=>t==="outstanding"||x.g["91-180"]+x.g["181+"]>0).sort((a,b)=>b.o-a.o);open(t==="outstanding"?"Outstanding":"Overdue",`<table><thead><tr><th>Party</th><th>0-30</th><th>31-60</th><th>61-90</th><th>91-180</th><th>181+</th><th>Total</th></tr></thead><tbody>${r.map(x=>`<tr><td class="link" onclick='party("${esc(x.p)}")'>${esc(x.p)}</td>${Object.keys(x.g).map(k=>`<td>${M(x.g[k])}</td>`).join("")}<td><b>${M(x.o)}</b></td></tr>`).join("")}</tbody></table>`);return}let m=new Map();for(let x of a){let k=N(x.party);if(!m.has(k))m.set(k,{p:x.party,n:0,a:0});let z=m.get(k);z.n++;z.a+=amt(x)}open(t==="sales"?"This Month Sales":"This Month Collection",`<table><thead><tr><th>Party</th><th>Transactions</th><th>Amount</th></tr></thead><tbody>${[...m.values()].sort((a,b)=>b.a-a.a).map(x=>`<tr><td class="link" onclick='party("${esc(x.p)}")'>${esc(x.p)}</td><td>${x.n}</td><td><b>${M(x.a)}</b></td></tr>`).join("")}</tbody></table>`)}
-$("role").addEventListener("change",()=>{const r=$("role").value; $("userWrap").style.display=r==="ADMIN"?"none":"block"; if(r==="ADMIN"){$("loginStatus").textContent="Admin access selected — no user selection required.";}else{$("loginStatus").textContent="Select a State Head or Party after the list loads.";}});
-
-async function preloadLogin(){try{await load();fillLoginUsers();$("loginStatus").textContent="Live data loaded. Select your role and user."; $("role").dispatchEvent(new Event("change"));}catch(e){$("loginStatus").textContent="Could not load live data. Check Google Sheet sharing: Anyone with link → Viewer."; console.error(e)}}
-function fillLoginUsers(){let r=$("role").value, vals=r==="STATE HEAD"?uniq(T.map(x=>x.sh)):r==="PARTY"?uniq(T.map(x=>x.party)):[]; $("user").innerHTML='<option value="">Select</option>'+vals.map(x=>`<option>${esc(x)}</option>`).join("")}
-$("role").addEventListener("change",fillLoginUsers);
-
-document.querySelectorAll(".filters select,.filters input").forEach(e=>e.addEventListener("input",render));document.querySelectorAll("[data-card]").forEach(e=>e.onclick=()=>card(e.dataset.card));$("close").onclick=()=>$("modal").classList.add("hide");$("modal").onclick=e=>{if(e.target.id==="modal")$("modal").classList.add("hide")};$("refresh").onclick=load;$("logout").onclick=()=>location.reload();$("loginBtn").onclick=()=>{role=$("role").value;user=$("user").value;if(role!=="ADMIN"&&!user)return alert("Select user");$("login").classList.add("hide");$("app").classList.remove("hide");$("roleTag").textContent=role;if(T.length){fill();render();}else{load()}};
-preloadLogin();
+const SID="1QIpcfgOVCFjcCmgU_DXKn8h7Bfa8rm2q2wB2HneTvKs",AID="1oHFpXqVDPRF3Vi3WV9MdNcxkHNjgytLPxXUQgM6o1ok";
+const S="Sheet1", AS={pay:"DEBTOR",cn:"CN SAP",dn:"DN SAP",ret:"SALE RETURN"};
+let role="ADMIN",user="",charts={};let LOOK={};
+const $=x=>document.getElementById(x), N=x=>String(x??"").trim().toLowerCase().replace(/\s+/g," "),
+M=x=>"₹"+(Number(x)||0).toLocaleString("en-IN",{maximumFractionDigits:0}),
+E=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function qdate(d){return `date '${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}'`}
+async function Q(id,sheet,tq){let u=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}&tq=${encodeURIComponent(tq)}`,r=await fetch(u);if(!r.ok)throw Error(sheet+" query failed");return csv(await r.text())}
+function csv(t){let R=[],r=[],c="",q=0;for(let i=0;i<t.length;i++){let x=t[i],y=t[i+1];if(x=='"'&&q&&y=='"'){c+='"';i++;continue}if(x=='"'){q=!q;continue}if(x==","&&!q){r.push(c);c="";continue}if((x=="\n"||x=="\r")&&!q){if(x=="\r"&&y=="\n")i++;r.push(c);c="";if(r.some(v=>v.trim()))R.push(r);r=[];continue}c+=x}if(c||r.length){r.push(c);R.push(r)}let h=R.shift().map(x=>x.trim());return R.map(a=>Object.fromEntries(h.map((k,i)=>[k,a[i]??""])))}
+const vals=r=>Object.values(r),num=v=>{let x=parseFloat(String(v??"").replace(/[₹,\s]/g,""));return isNaN(x)?0:x};
+function escq(s){return String(s??"").replace(/'/g,"''")}
+function opts(id,a){$(id).innerHTML='<option>ALL</option>'+[...new Set(a.filter(Boolean))].sort().map(x=>`<option>${E(x)}</option>`).join("")}
+async function loginLookups(){
+ try{
+  $("status").textContent="Loading small lookup lists only…";
+  let [sh,party,state,group,fy,month]=await Promise.all([
+   Q(SID,S,"select A where A is not null group by A label A ''"),
+   Q(SID,S,"select F where F is not null group by F label F ''"),
+   Q(SID,S,"select L where L is not null group by L label L ''"),
+   Q(SID,S,"select K where K is not null group by K label K ''"),
+   Q(SID,S,"select B where B is not null group by B label B ''"),
+   Q(SID,S,"select C where C is not null group by C label C ''")
+  ]);
+  LOOK={sh:sh.map(x=>vals(x)[0]),party:party.map(x=>vals(x)[0]),state:state.map(x=>vals(x)[0]),group:group.map(x=>vals(x)[0]),fy:fy.map(x=>vals(x)[0]),month:month.map(x=>vals(x)[0])};
+  fillUsers();fillFilters();$("status").textContent="Ready. No full Sales sheet has been downloaded.";
+ }catch(e){$("status").textContent="Google Sheet access failed. Set both files to Anyone with link → Viewer.";console.error(e)}
+}
+function fillUsers(){let r=$("role").value,a=r==="STATE HEAD"?LOOK.sh:r==="PARTY"?LOOK.party:[];$("user").innerHTML='<option value="">Select</option>'+a.map(x=>`<option>${E(x)}</option>`).join("");$("userWrap").style.display=r==="ADMIN"?"none":"block"}
+function fillFilters(){opts("sh",LOOK.sh);opts("party",LOOK.party);opts("state",LOOK.state);opts("group",LOOK.group);opts("fy",LOOK.fy);opts("month",LOOK.month)}
+function baseWhere(extra=""){let w=[];if(role==="STATE HEAD")w.push(`A='${escq(user)}'`);if(role==="PARTY")w.push(`F='${escq(user)}'`);
+ [["sh","A"],["state","L"],["group","K"],["party","F"],["fy","B"],["month","C"]].forEach(([id,col])=>{if($(id).value!=="ALL")w.push(`${col}='${escq($(id).value)}'`)});
+ if($("from").value)w.push(`D>=${qdate(new Date($("from").value))}`);
+ if($("to").value)w.push(`D<=${qdate(new Date($("to").value))}`);
+ if(extra)w.push(extra);return w.length?" where "+w.join(" and "):""
+}
+async function acc(sheet){
+ let p=sheet==="DEBTOR"?"B":"E",a=sheet==="SALE RETURN"?"F":"D";
+ let rows=await Q(AID,sheet,`select ${p},sum(${a}) where ${p} is not null group by ${p} label sum(${a}) ''`);
+ let total=rows.reduce((s,r)=>s+num(vals(r)[1]),0);
+ let n=new Date(),st=new Date(n.getFullYear(),n.getMonth(),1),nx=new Date(n.getFullYear(),n.getMonth()+1,1);
+ let mr=await Q(AID,sheet,`select sum(${a}) where A>=${qdate(st)} and A<${qdate(nx)} label sum(${a}) ''`);
+ return {rows,total,month:num(mr[0]?vals(mr[0])[0]:0)}
+}
+async function dashboard(){
+ $("loadbar").textContent="Loading compact summaries…";
+ let n=new Date(),st=new Date(n.getFullYear(),n.getMonth(),1),nx=new Date(n.getFullYear(),n.getMonth()+1,1),w=baseWhere();
+ let [s,party,months,cm]=await Promise.all([
+  Q(SID,S,`select A,L,K,sum(J) ${w} group by A,L,K label sum(J) ''`),
+  Q(SID,S,`select F,A,L,sum(J) ${w} group by F,A,L label sum(J) ''`),
+  Q(SID,S,`select B,sum(J) ${w} group by B label sum(J) ''`),
+  Q(SID,S,`select sum(J) ${baseWhere(`D>=${qdate(st)} and D<${qdate(nx)}`)} label sum(J) ''`)
+ ]);
+ let [pay,cn,dn,ret]=await Promise.all([acc(AS.pay),acc(AS.cn),acc(AS.dn),acc(AS.ret)]);
+ let sales=cm[0]?num(vals(cm[0])[0])*1.18:0;
+ let totalSales=party.reduce((z,r)=>z+num(vals(r)[3])*1.18,0);
+ let outstanding=totalSales+dn.total-pay.total-cn.total-ret.total;
+ $("salesK").textContent=M(sales);$("collectionK").textContent=M(pay.month);$("outK").textContent=M(outstanding);
+ $("cnK").textContent=M(cn.total);$("dnK").textContent=M(dn.total);$("retK").textContent=M(ret.total);
+ $("overK").textContent="Click";
+ renderParty(party,pay,cn,dn,ret);renderCharts(s,months);
+ $("loadbar").textContent="FAST MODE: full 2 lakh-row Sales sheet was NOT downloaded."
+}
+function renderParty(s,p,c,d,r){
+ let m=new Map();
+ for(let x of s){let v=vals(x),k=N(v[0]);if(!m.has(k))m.set(k,{p:v[0],sh:v[1],st:v[2],sales:0,pay:0,cn:0,dn:0,ret:0});m.get(k).sales+=num(v[3])*1.18}
+ for(let [key,o] of [["pay",p],["cn",c],["dn",d],["ret",r]])for(let x of o.rows){let v=vals(x),k=N(v[0]);if(!m.has(k))m.set(k,{p:v[0],sh:"",st:"",sales:0,pay:0,cn:0,dn:0,ret:0});m.get(k)[key]+=num(v[1])}
+ let rows=[...m.values()].map(x=>({...x,out:x.sales+x.dn-x.pay-x.cn-x.ret})).sort((a,b)=>b.out-a.out);window.PARTIES=rows;
+ $("partyRows").innerHTML=rows.slice(0,150).map(x=>`<tr><td class="link" onclick='partyDetail(${JSON.stringify(x.p)})'>${E(x.p)}</td><td>${E(x.sh)}</td><td>${E(x.st)}</td><td>${M(x.sales)}</td><td>${M(x.pay)}</td><td>${M(x.cn)}</td><td>${M(x.dn)}</td><td>${M(x.ret)}</td><td><b>${M(x.out)}</b></td></tr>`).join("")
+}
+function chart(id,type,labels,data,label){if(charts[id])charts[id].destroy();charts[id]=new Chart($(id),{type,data:{labels,datasets:[{label,data,borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false}})}
+function renderCharts(s,m){
+ let sh={},st={},mo={};for(let x of s){let v=vals(x),z=num(v[3])*1.18;sh[v[0]]=(sh[v[0]]||0)+z;st[v[1]]=(st[v[1]]||0)+z}
+ for(let x of m){let v=vals(x);mo[v[0]]=(mo[v[0]]||0)+num(v[1])*1.18}
+ chart("shChart","bar",Object.keys(sh).slice(0,15),Object.values(sh).slice(0,15),"Sales");
+ chart("stateChart","bar",Object.keys(st).slice(0,15),Object.values(st).slice(0,15),"Sales");
+ chart("monthChart","bar",Object.keys(mo),Object.values(mo),"Sales");
+ let p=(window.PARTIES||[]).slice(0,10);chart("outChart","doughnut",p.map(x=>x.p),p.map(x=>Math.max(0,x.out)),"Outstanding")
+}
+async function partyDetail(p){
+ $("mtitle").textContent=p;$("mbody").innerHTML="Loading only this party's sales…";$("modal").classList.remove("hide");
+ let rows=await Q(SID,S,`select D,E,G,K,H,I,J,L,A where F='${escq(p)}' order by D desc`);
+ let b=rows.map(x=>{let v=vals(x);return`<tr><td>${E(v[0])}</td><td class="link" onclick='invoiceDetail(${JSON.stringify(v[1])},${JSON.stringify(p)})'>${E(v[1])}</td><td>${E(v[2])}</td><td>${E(v[3])}</td><td>${E(v[4])}</td><td>${M(v[6])}</td><td>${E(v[7])}</td><td>${E(v[8])}</td></tr>`}).join("");
+ $("mbody").innerHTML=`<div class="age"><div>Party<b>${E(p)}</b></div><div>Rows<b>${rows.length}</b></div><div>Invoices<b>${new Set(rows.map(x=>vals(x)[1])).size}</b></div><div>Taxable<b>${M(rows.reduce((z,x)=>z+num(vals(x)[6]),0))}</b></div><div>GST-inclusive<b>${M(rows.reduce((z,x)=>z+num(vals(x)[6])*1.18,0))}</b></div></div><table><thead><tr><th>Date</th><th>Invoice</th><th>Item Code</th><th>Group</th><th>Qty</th><th>Taxable</th><th>State</th><th>State Head</th></tr></thead><tbody>${b}</tbody></table>`
+}
+async function invoiceDetail(inv,p){
+ let rows=await Q(SID,S,`select D,E,F,G,K,H,I,J,L,A where E='${escq(inv)}' and F='${escq(p)}' order by D`);
+ let b=rows.map(x=>{let v=vals(x),t=num(v[7]);return`<tr><td>${E(v[0])}</td><td>${E(v[2])}</td><td>${E(v[3])}</td><td>${E(v[4])}</td><td>${E(v[5])}</td><td>${M(v[6])}</td><td>${M(t*.18)}</td><td>${M(t*1.18)}</td></tr>`}).join("");
+ $("mtitle").textContent="Invoice "+inv;$("mbody").innerHTML=`<h3>${E(p)}</h3><table><thead><tr><th>Date</th><th>Item Code</th><th>Group</th><th>Qty</th><th>Sale Rate</th><th>Taxable</th><th>GST 18%</th><th>Total</th></tr></thead><tbody>${b}</tbody></table>`
+}
+async function card(type){
+ $("modal").classList.remove("hide");$("mtitle").textContent=type==="sales"?"THIS MONTH SALES":type==="collection"?"THIS MONTH COLLECTION":"OUTSTANDING";$("mbody").innerHTML="Loading…";
+ if(type==="sales"){let n=new Date(),st=new Date(n.getFullYear(),n.getMonth(),1),nx=new Date(n.getFullYear(),n.getMonth()+1,1),r=await Q(SID,S,`select F,sum(J) ${baseWhere(`D>=${qdate(st)} and D<${qdate(nx)}`)} group by F label sum(J) ''`);$("mbody").innerHTML=`<table><thead><tr><th>Party</th><th>Sales incl GST</th></tr></thead><tbody>${r.map(x=>{let v=vals(x);return`<tr><td class="link" onclick='partyDetail(${JSON.stringify(v[0])})'>${E(v[0])}</td><td>${M(num(v[1])*1.18)}</td></tr>`}).join("")}</tbody></table>`}
+ else if(type==="collection"){let r=await Q(AID,AS.pay,"select B,sum(D) where B is not null group by B label sum(D) ''");$("mbody").innerHTML=`<table><thead><tr><th>Party</th><th>Collection</th></tr></thead><tbody>${r.map(x=>{let v=vals(x);return`<tr><td>${E(v[0])}</td><td>${M(v[1])}</td></tr>`}).join("")}</tbody></table>`}
+ else {$("mbody").innerHTML=`<p>Party outstanding is calculated from compact summaries. Click any party for its detailed invoice rows.</p><table><thead><tr><th>Party</th><th>Outstanding</th></tr></thead><tbody>${(window.PARTIES||[]).slice(0,150).map(x=>`<tr><td class="link" onclick='partyDetail(${JSON.stringify(x.p)})'>${E(x.p)}</td><td>${M(x.out)}</td></tr>`).join("")}</tbody></table>`}
+}
+$("role").onchange=fillUsers;
+$("loginBtn").onclick=async()=>{role=$("role").value;user=$("user").value;if(role!=="ADMIN"&&!user)return alert("Select user");$("login").classList.add("hide");$("app").classList.remove("hide");$("roleTag").textContent=role;try{await dashboard()}catch(e){alert("Dashboard error: "+e.message);console.error(e)}};
+$("refresh").onclick=dashboard;$("logout").onclick=()=>location.reload();$("close").onclick=()=>$("modal").classList.add("hide");$("modal").onclick=e=>{if(e.target.id==="modal")$("modal").classList.add("hide")};
+document.querySelectorAll("[data-card]").forEach(x=>x.onclick=()=>card(x.dataset.card));
+document.querySelectorAll(".filters select,.filters input").forEach(x=>x.addEventListener("change",dashboard));
+loginLookups();

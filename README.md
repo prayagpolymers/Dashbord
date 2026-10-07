@@ -1,25 +1,20 @@
-# Prayag Sales & Accounting Portal V2
-Upload index.html, style.css and script.js to GitHub Pages.
+# Prayag Sales & Accounting Portal V5 — Fast Query Mode
 
-Live sources:
-- Sales: workbook 1QIpcfgOVCFjcCmgU_DXKn8h7Bfa8rm2q2wB2HneTvKs / Sheet1
-- Accounting: workbook 1oHFpXqVDPRF3Vi3WV9MdNcxkHNjgytLPxXUQgM6o1ok
-  SALE RETURN, CN SAP, DN SAP, DEBTOR
+V5 is designed specifically to solve the slow loading problem.
 
-Accounting:
-SALE = taxable + 18% GST (debit)
-DN = debit, GST already included
-CN = credit, GST already included
-SALE RETURN = credit, GST already included
-DEBTOR = payment, credit
+It DOES NOT download the full 215k-row Sales sheet at startup.
+- Login: only small lookup queries (State Head, Party, State, Group, FY, Month).
+- Dashboard: server-side aggregated queries.
+- Party details: loaded only when a Party is clicked.
+- Invoice/item details: loaded only when an Invoice is clicked.
 
-Header matching is normalized to handle trailing spaces and variants such as STATE HEAD A / STATE HEAD A  and CODE / ITEM CODE.
+Sources:
+Sales workbook: 1QIpcfgOVCFjcCmgU_DXKn8h7Bfa8rm2q2wB2HneTvKs / Sheet1
+Accounting workbook: 1oHFpXqVDPRF3Vi3WV9MdNcxkHNjgytLPxXUQgM6o1ok
+Tabs: SALE RETURN, CN SAP, DN SAP, DEBTOR
 
-## V3 login improvement
-The login screen now preloads live data. ADMIN does not require a User selection.
-STATE HEAD shows only State Heads; PARTY shows only Parties.
+Important:
+Both Google workbooks must be shared as Anyone with the link → Viewer.
 
-## V4 performance fix
-- Login no longer downloads the Google Sheets a second time.
-- Preloaded data is reused when opening the dashboard.
-- Session cache prevents repeated downloads during the same browser session.
+Sales amount is treated as taxable and dashboard totals add 18% GST.
+CN, DN and Sales Return are treated as GST-inclusive.
